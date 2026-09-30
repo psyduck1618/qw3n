@@ -70,6 +70,8 @@ MAX_SETUP_SECONDS = 30 * 60
 TOKEN = None
 AUTH_ENABLED = True
 SETUP_ENABLED = True
+BIND_HOST = "0.0.0.0"
+BIND_PORT = 8080
 
 # ip -> [window start, attempt count]  — crude but enough to slow a guessing loop
 FAILURES = {}
@@ -521,6 +523,7 @@ def setup_overview():
     pending = [s for s in steps if s["state"] == "missing"]
     return {
         "completed": setup_done(),
+        "skipped": bool(setup_state().get("skipped")),
         "enabled": SETUP_ENABLED,
         "steps": steps,
         "pending": [s["id"] for s in pending],
@@ -857,10 +860,12 @@ class Handler(BaseHTTPRequestHandler):
     # -- session ---------------------------------------------------------
 
     def session_state(self):
+        state = setup_state()
         return {
             "authRequired": AUTH_ENABLED,
             "authed": self.is_authed(),
-            "setupCompleted": setup_done(),
+            "setupCompleted": bool(state.get("completed")),
+            "setupSkipped": bool(state.get("skipped")),
             "setupEnabled": SETUP_ENABLED,
         }
 
@@ -882,18 +887,12 @@ class Handler(BaseHTTPRequestHandler):
         given = str(payload.get("token") or "")
         if TOKEN and hmac.compare_digest(given, TOKEN):
             FAILURES.pop(self.client_ip(), None)
-            cookie = (
-                f"{COOKIE}={urllib.parse.quote(TOKEN)}; Path=/; HttpOnly; "
-                f"SameSite=Lax; Max-Age={COOKIE_MAX_AGE}"
-            )
-            if self.is_https():
-                cookie += "; Secure"
-            self.send_response(200)
             body = json.dumps({"ok": True}).encode()
+            self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
-            self.send_header("Set-Cookie", cookie)
+            self.send_header("Set-Cookie", self.cookie_header())
             self.end_headers()
             self.wfile.write(body)
             log(f"unlocked from {self.client_ip()}")
@@ -990,6 +989,93 @@ class Handler(BaseHTTPRequestHandler):
         SETUP_ENABLED = True
         self.send_json({"ok": True})
 
+    def setup_skip(self):
+        """Walk away from the installer for good, without pretending it passed.
+
+        Unlike finish() this leaves completed=false, so the runner stays
+        open and the terminal keeps saying the setup is unfinished. Only the
+        automatic redirect on launch is suppressed.
+        """
+        setup_save(skipped=True, skippedAt=time.time())
+        self.send_json({"ok": True, "skipped": True})
+
+    # -- maintenance ----------------------------------------------------
+
+    def token_rotate(self):
+        """Mint a new access token, invalidating every existing cookie.
+
+        The route is already behind is_authed(), so reaching this point is
+        proof enough — there is no second factor to ask for.
+        """
+        global TOKEN
+        if not AUTH_ENABLED:
+            self.send_error_json(400, "auth is disabled — there is no token")
+            return
+        TOKEN = secrets.token_urlsafe(18)
+        try:
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            TOKEN_FILE.write_text(TOKEN + "\n", "utf-8")
+            TOKEN_FILE.chmod(0o600)
+        except OSError as exc:
+            self.send_error_json(500, f"could not save the new token: {exc}")
+            return
+        setup_log("access token rotated")
+        body = json.dumps({"ok": True, "token": TOKEN}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        # hand the caller a fresh cookie, otherwise rotating locks you out
+        self.send_header("Set-Cookie", self.cookie_header())
+        self.end_headers()
+        self.wfile.write(body)
+
+    def cookie_header(self, value=None):
+        cookie = (
+            f"{COOKIE}={urllib.parse.quote(value or TOKEN)}; Path=/; HttpOnly; "
+            f"SameSite=Lax; Max-Age={COOKIE_MAX_AGE}"
+        )
+        if self.is_https():
+            cookie += "; Secure"
+        return cookie
+
+    def info(self):
+        """Everything the maintenance page needs to describe this install."""
+        trashed = len(list(TRASH_DIR.glob("*.json"))) if TRASH_DIR.exists() else 0
+        tail = []
+        try:
+            lines = SETUP_LOG.read_text("utf-8", errors="replace").splitlines()
+            tail = lines[-40:]
+        except OSError:
+            pass
+        state = setup_state()
+        return {
+            "version": "1.0.0",
+            "host": BIND_HOST,
+            "port": BIND_PORT,
+            "authEnabled": AUTH_ENABLED,
+            "ollamaUrl": OLLAMA_URL,
+            "ollamaOnline": ollama_reachable(2),
+            "models": len(installed_models()),
+            "setup": {
+                "completed": bool(state.get("completed")),
+                "skipped": bool(state.get("skipped")),
+                "enabled": SETUP_ENABLED,
+                "model": chosen_model(),
+                "verified": state.get("verified") or "",
+            },
+            "data": {
+                "dir": str(DATA_DIR),
+                "chats": len(list(CHATS_DIR.glob("*.json"))) if CHATS_DIR.exists() else 0,
+                "trash": trashed,
+                "tokenFile": str(TOKEN_FILE) if AUTH_ENABLED else None,
+            },
+            # only ever sent to a caller that already passed is_authed(),
+            # and only when the gate is on in the first place
+            "token": TOKEN if AUTH_ENABLED else None,
+            "log": tail,
+        }
+
     # -- routes ----------------------------------------------------------
 
     def do_GET(self):
@@ -1001,11 +1087,14 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/session":
             self.send_json(self.session_state())
         elif path == "/api/health":
-            self.send_json({"ok": True, "ollama": OLLAMA_URL, "auth": AUTH_ENABLED})
+            # public, so it must not tell an attacker whether the gate is on
+            self.send_json({"ok": True})
         elif not self.is_authed():
             self.send_error_json(401, "locked")
         elif path == "/api/setup":
             self.send_json(setup_overview())
+        elif path == "/api/info":
+            self.send_json(self.info())
         elif path == "/api/models":
             self.send_json(fetch_models())
         elif path == "/api/chats":
@@ -1036,6 +1125,10 @@ class Handler(BaseHTTPRequestHandler):
             self.setup_finish()
         elif path == "/api/setup/reset":
             self.setup_reset()
+        elif path == "/api/setup/skip":
+            self.setup_skip()
+        elif path == "/api/token/rotate":
+            self.token_rotate()
         elif path == "/api/chats":
             try:
                 self.send_json(save_chat(self.read_json()))
@@ -1206,10 +1299,12 @@ def main():
     )
     args = parser.parse_args()
 
-    global TOKEN, AUTH_ENABLED, SETUP_ENABLED
+    global TOKEN, AUTH_ENABLED, SETUP_ENABLED, BIND_HOST, BIND_PORT
     AUTH_ENABLED = not args.no_auth
     TOKEN = resolve_token(args.token) if AUTH_ENABLED else None
     SETUP_ENABLED = args.setup or not setup_done()
+    BIND_HOST = args.host
+    BIND_PORT = args.port
 
     try:
         sys.stdout.reconfigure(line_buffering=True)
@@ -1261,11 +1356,14 @@ def main():
 
     if not setup_done():
         pending = [s["id"] for s in step_snapshot() if s["state"] == "missing"]
-        if pending:
+        if not pending:
+            print(f"  {c('setup', '92')} everything is installed — you can skip to the chat")
+        elif setup_state().get("skipped"):
+            print(f"  {c('setup', '93')} skipped, still missing: {c(', '.join(pending), '2')}")
+            print(f"  {c('reopen it with --setup, or the Setup button in the app', '2')}")
+        else:
             print(f"  {c('setup', '93')} not finished — the browser will walk you through it")
             print(f"  {c('missing: ' + ', '.join(pending), '2')}")
-        else:
-            print(f"  {c('setup', '92')} everything is installed — you can skip to the chat")
     elif SETUP_ENABLED:
         print(f"  {c('setup', '93')} forced open with --setup")
     else:

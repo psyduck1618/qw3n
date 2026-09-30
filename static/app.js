@@ -84,10 +84,11 @@ async function checkSession() {
     const data = await res.json();
     state.authed = !data.authRequired || !!data.authed;
     state.setupComplete = data.setupCompleted !== false;
+    state.setupSkipped = !!data.setupSkipped;
     if (!state.authed) lockGate();
-    return state.authed;
+    return data;
   } catch (_) {
-    return true;
+    return { authRequired: false, authed: true, setupCompleted: true };
   }
 }
 
@@ -110,11 +111,8 @@ async function submitGate(event) {
     if (res.ok && data.ok) {
       unlockGate();
       toast('unlocked');
-      await checkSession();
-      if (!state.setupComplete) {
-        await Setup.start();
-        return;
-      }
+      const session = await checkSession();
+      if (session && (await Setup.boot(session))) return;
       await loadModels();
       await loadChats();
       const last = localStorage.getItem(LS.lastChat);
@@ -143,35 +141,6 @@ async function shareLink() {
     toast(lan ? 'LAN address copied' : 'address copied');
   } catch (_) {
     copyText(url);
-  }
-}
-
-async function showSetupState() {
-  const note = $('#setupState');
-  const button = $('#rerunSetup');
-  if (!note) return;
-  try {
-    const data = await api('/api/setup');
-    const missing = data.pending || [];
-    note.textContent = data.completed
-      ? `Finished with ${data.model}. ${missing.length} step(s) are missing again.`
-      : `${missing.length} step(s) still to do.`;
-    if (button) {
-      button.disabled = !data.enabled;
-      button.title = data.enabled ? '' : 'Restart the server with --setup';
-    }
-  } catch (_) {
-    note.textContent = 'unavailable';
-  }
-}
-
-async function rerunSetup() {
-  try {
-    await api('/api/setup/reset', { method: 'POST' });
-    toast('installer reopened');
-    setTimeout(() => location.reload(), 400);
-  } catch (err) {
-    toast(err.message || 'could not reopen the installer');
   }
 }
 
@@ -839,9 +808,8 @@ function wire() {
 
   $('#gateForm').addEventListener('submit', submitGate);
   $('#btnShare').addEventListener('click', shareLink);
-  $('#rerunSetup').addEventListener('click', rerunSetup);
-  showSetupState();
-
+  $('#btnSetup').addEventListener('click', () => Setup.open(false));
+  $('#setupPageClose').addEventListener('click', () => Setup.close());
   $('#stream').addEventListener('click', (e) => {
     const copyBtn = e.target.closest('[data-copy-code]');
     if (copyBtn) {
@@ -891,16 +859,14 @@ async function init() {
     $('#input').placeholder = 'Send a message…';
   }
 
-  if (!(await checkSession())) {
+  const session = await checkSession();
+  if (!session) {
     autoGrow();
     return;
   }
 
-  // first run: hand over to the guided installer instead of the chat
-  if (!state.setupComplete) {
-    await Setup.start();
-    return;
-  }
+  // first run: hand over to the setup page instead of the chat
+  if (await Setup.boot(session)) return;
 
   await loadModels();
   await loadChats();

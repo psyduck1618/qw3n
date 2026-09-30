@@ -27,7 +27,8 @@
       <div class="brand-mark">QW</div>
       <div>
         <div class="brand-name">QW3N</div>
-        <div class="brand-sub">liquid glass · ollama</div>      </div>
+        <div class="brand-sub">liquid glass · ollama</div>
+      </div>
     </div>
 
     <div class="side-actions">
@@ -65,6 +66,10 @@
 
       <span class="spacer"></span>
 
+      <button class="btn" id="btnSetup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 4.2v8.6L12 20l-7.5-4.2V7.2z"/><path d="M12 12l7.5-4.2M12 12v8M12 12L4.5 7.8"/></svg>
+        Setup
+      </button>
       <button class="btn" id="btnLearn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg>
         Learn
@@ -120,15 +125,21 @@
       <button class="btn" id="resetParams">Reset params</button>
       <button class="btn danger" id="dropChat" title="Moves the file to data/.trash — recoverable">Delete chat</button>
     </div>
-
-    <div class="divider"></div>
-    <div class="field">
-      <label>Installer</label>
-      <div class="hint" id="setupState">Checking…</div>
-      <button class="btn" id="rerunSetup">Re-open the installer</button>
-    </div>
   </div>
 </aside>
+
+<!-- ============================ SETUP & MAINTENANCE ============================ -->
+<section class="setuppage" id="setupPage">
+  <div class="learn-head">
+    <h2>Setup &amp; maintenance</h2>
+    <button class="btn icon" id="setupPageClose" aria-label="Close" title="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="learn-body" id="setupPageBody">
+    <div class="learn-inner" id="setupPageInner"></div>
+  </div>
+</section>
 
 <!-- ============================ LEARN ============================ -->
 <section class="learn" id="learn">

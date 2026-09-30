@@ -39,11 +39,27 @@ can lose data if two tabs write at once.
 Deleting moves the file to `data/.trash/` and prunes anything older than 30
 days. See the incident note in the git log.
 
-## The installer
+## The setup page
 
 `STEPS` in `server.py` is a list of dicts, each with a `probe` that reports
 state and, where useful, an `argv` to run. `StepRun.events()` turns one step
 into a stream of JSON events the page renders as terminal output.
+
+`static/setup.js` renders the same content for two audiences: the first-run
+installer, and the maintenance page behind the **Setup** button. `Setup.boot()`
+decides which by looking at `/api/session`.
+
+Three end states, deliberately distinct:
+
+| state | in `data/setup.json` | runner | opens on launch |
+|---|---|---|---|
+| finished | `completed: true` | **closed** | no |
+| skipped | `skipped: true` | open | no |
+| untouched | neither | open | yes |
+
+Skipping is one-time but does not mark anything finished, so the terminal keeps
+telling the truth about what is still missing. Finishing is the only thing that
+closes the runner.
 
 The security model is the important part:
 
@@ -52,6 +68,8 @@ The security model is the important part:
 - The model name is regex-validated in `pick_model`.
 - `SETUP_ENABLED` goes `False` in `setup_finish()`, and the run endpoint
   returns 403 from then on.
+- `POST /api/token/rotate` re-mints the token and sets a fresh cookie in the
+  same response, so rotating does not lock the caller out.
 
 To add a step, append to `STEPS`. If it needs a command, write the `argv` by
 hand in the probe. Do not build one from request data.

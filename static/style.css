@@ -1068,8 +1068,50 @@ input:focus, textarea.sys:focus, input[type="password"]:focus, select.plain:focu
 .learn .good { color: var(--green); font-weight: 600; }
 
 /* ---------------------------------------------------------
-   11b · guided installer
+   11b · setup & maintenance page
    --------------------------------------------------------- */
+
+.setuppage {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(5, 6, 9, 0.9);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s;
+  display: flex;
+  flex-direction: column;
+}
+.setuppage.show { opacity: 1; pointer-events: auto; }
+body.setup-open { overflow: hidden; }
+
+.kv {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: 7px 18px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.028);
+  font-size: 12.5px;
+}
+.kv > span { color: var(--label-3); }
+.kv > b {
+  font-weight: 550;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.kv > b.warn { color: var(--orange); }
+
+.setup-note {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--label-2);
+  margin-top: 12px;
+}
 
 .setup-bar {
   display: flex;
@@ -1077,12 +1119,15 @@ input:focus, textarea.sys:focus, input[type="password"]:focus, select.plain:focu
   flex-wrap: wrap;
   margin-top: 16px;
 }
-.setup-bar .btn { padding: 10px 15px; }
+/* .btn.primary is full-width for the sidebar's New chat; here it should not be */
+.setup-bar .btn,
+.setup-bar .btn.primary { width: auto; padding: 10px 15px; }
 
 .setup-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
   margin-top: 13px;
 }
 

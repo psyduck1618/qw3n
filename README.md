@@ -98,10 +98,11 @@ public HTTPS URL with no router changes. Both print their URL in the banner.
 
 Do not forward the port on your router unless you have the password gate on.
 
-## The installer
+## The setup page
 
-First run shows the setup steps as a chat thread. Each one is probed against
-the machine, and the missing ones can be run from the page:
+One page covers both jobs: the first-run installer, and maintenance afterwards.
+It opens automatically on the first launch, and after that lives behind the
+**Setup** button in the top bar.
 
 | step | what it does |
 |---|---|
@@ -112,7 +113,21 @@ the machine, and the missing ones can be run from the page:
 | Download the model | `ollama pull <model>`, with a picker for which one |
 | Verify end to end | sends a 2-token test message through the whole chain |
 
-Re-open it any time with `./run.sh --setup`, or from **Settings → Installer**.
+Below the steps it also shows how to reach the server from a phone, the access
+token with a reveal/copy button and a **Generate a new token** action, what the
+server is bound to, where the data folder is, and the tail of the installer log.
+
+### Skip is one-time, and does not lie
+
+**Skip to the chat** is a one-time action. It records `skipped` in
+`data/setup.json`, drops you into the working chat, and the page will not open
+again on launch. It deliberately does **not** mark setup finished — nothing was
+verified, so the terminal keeps reporting the setup as unfinished, and the
+command runner stays open.
+
+**Mark setup finished** is the other button. That one closes the runner for the
+rest of the server process, so there is no command execution surface left at
+all. Bring it back with `./run.sh --setup`.
 
 ### Why it is safe to let a web page run commands
 
@@ -129,13 +144,20 @@ It is not a general command runner:
   it back you have to restart the server with `--setup`.
 - Every step is appended to `data/setup.log`.
 
+### Rotating the token
+
+**Generate a new token** on the setup page writes a fresh random token to
+`data/.token` and hands this browser a new cookie, so you stay signed in while
+every other device is locked out. The Setup page is the only place the token is
+ever displayed, and only to a caller that has already passed the gate.
+
 ## What lives where
 
 ```
 data/chats/*.json     one file per conversation
 data/.trash/          deleted chats — move one back to restore it
 data/.token           the password, mode 600
-data/setup.json       chosen model + installer state
+data/setup.json       chosen model, installer state (completed / skipped)
 data/setup.log        what the installer ran
 ```
 
