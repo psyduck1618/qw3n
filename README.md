@@ -64,7 +64,7 @@ The terminal prints every address that works:
 ```
   local     http://127.0.0.1:8080
   home wifi http://192.168.1.21:8080  phone / laptop
-  token     <redacted>  needed once per browser
+  token     <printed once, also in data/.token>  needed once per browser
 ```
 
 ### The password
