@@ -4,12 +4,12 @@ Five files carry the whole app. Nothing here needs a package manager.
 
 | file | lines | what it owns |
 |---|---|---|
-| `server.py` | ~1100 | routing, auth, streaming proxy, chat storage, the installer |
+| `server.py` | ~1290 | routing, auth, streaming proxy, chat storage, the installer |
 | `static/index.html` | 280 | the DOM, plus the in-app "How this works" explainer |
-| `static/style.css` | 1300 | the Liquid Glass design system |
-| `static/app.js` | 920 | chat state, SSE reader, settings drawer |
-| `static/setup.js` | 400 | the first-run installer, drawn as a chat thread |
-| `static/markdown.js` | 352 | markdown + syntax highlighting, hand-rolled |
+| `static/style.css` | ~1300 | the Liquid Glass design system |
+| `static/app.js` | ~920 | chat state, SSE reader, settings drawer |
+| `static/setup.js` | ~400 | the first-run installer, drawn as a chat thread |
+| `static/markdown.js` | ~350 | markdown + syntax highlighting, hand-rolled |
 
 ## The request path
 
