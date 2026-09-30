@@ -20,7 +20,33 @@ interface, with the reply streaming in a token at a time.
 
 ---
 
-## What it is
+## What it does
+
+A chat window for a model that is already on your machine. You type, Ollama
+thinks, the answer arrives word by word. Nothing you write leaves the house.
+
+**It installs itself.** The first run opens a setup page instead of the chat.
+It probes for Python, Ollama and a model, then runs whatever is missing one
+step at a time — pulling a 5 GB model, starting the server, verifying the whole
+chain end to end — with the command output streaming into the page as it goes.
+
+**It works from your phone.** The same URL on any device on the same WiFi, with
+a password so the neighbour's laptop cannot read your conversations. Add
+`--tunnel` and it works from anywhere at all.
+
+**It keeps the history.** Every conversation is a plain JSON file in
+`data/chats/`. No database, no account, no cloud. Delete a thread and the file
+moves to `data/.trash/` rather than vanishing.
+
+**It needs nothing.** No pip, no virtualenv, no `node_modules`, no build step.
+One Python file using only the standard library, plus a folder of static files.
+Clone it and run it.
+
+**It is yours.** The sampling parameters are all exposed in the Settings drawer.
+Change the system prompt, the temperature, the context window. Point it at a
+different model whenever you like.
+
+## How it fits together
 
 Ollama serves the model on `127.0.0.1:11434`. QW3N is the front end: it serves
 the page, proxies your messages to Ollama, and streams the tokens back so you
@@ -33,8 +59,10 @@ watch the answer being written.
 └──────────────┘   SSE     └──────────────────┘  tokens  └─────────────┘
 ```
 
-Because the browser only ever talks to `:8080`, there is no CORS to configure
-and Ollama never needs to be exposed to the network.
+The middle box is the whole point. It re-frames Ollama's newline-delimited JSON
+as server-sent events, which means the browser only ever talks to `:8080`:
+no CORS to configure, no `OLLAMA_ORIGINS=*`, and Ollama stays bound to
+localhost where nothing else can reach it.
 
 ## Requirements
 
