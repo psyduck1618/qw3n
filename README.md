@@ -6,7 +6,7 @@ No pip. No build step. No node_modules. One Python file, one folder of static
 files, and everything runs on your own machine.
 
 ```bash
-git clone <this-repo> qw3n
+git clone https://github.com/psyduck1618/qw3n.git
 cd qw3n
 ./run.sh
 ```
@@ -14,6 +14,9 @@ cd qw3n
 The first run opens an installer instead of the chat. It checks for Python,
 Ollama and a model, and runs whatever is missing — one step at a time, with
 the command output streaming into the page.
+
+Once it is finished you land in the chat — a macOS Tahoe style Liquid Glass
+interface, with the reply streaming in a token at a time.
 
 ---
 
@@ -200,3 +203,8 @@ Silicon.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Contributing
+
+Bug reports and pull requests welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+Feature work branches off `develop`; `main` only takes merges.
