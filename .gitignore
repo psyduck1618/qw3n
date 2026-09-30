@@ -1,0 +1,28 @@
+# Runtime state. Everything under data/ is the user's, not the repo's.
+# The .gitkeep files keep the folders in the tree.
+data/*
+!data/.gitkeep
+# git will not descend into an excluded directory, so re-include the folder
+# itself before excluding what is inside it
+!data/chats/
+data/chats/*
+!data/chats/.gitkeep
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+
+# os / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# browser automation scratch
+.bcode/

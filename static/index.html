@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07080b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>QW3N · local chat</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%2364b2ff'/><stop offset='.5' stop-color='%230a84ff'/><stop offset='1' stop-color='%230060df'/></linearGradient></defs><rect width='32' height='32' rx='9' fill='url(%23g)'/></svg>">
+</head>
+<body>
+
+<!-- ambient light the glass refracts -->
+<div class="aurora" aria-hidden="true">
+  <span></span><span></span><span></span><span></span>
+</div>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="app">
+  <!-- ============================ SIDEBAR ============================ -->
+  <aside class="side" id="side">
+    <div class="brand">
+      <div class="brand-mark">QW</div>
+      <div>
+        <div class="brand-name">QW3N</div>
+        <div class="brand-sub">liquid glass · ollama</div>      </div>
+    </div>
+
+    <div class="side-actions">
+      <button class="btn primary" id="btnNew">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        New chat
+      </button>
+    </div>
+
+    <div class="side-label"><span>History</span></div>
+    <div class="threads" id="threads"></div>
+
+    <div class="side-foot">
+      <span class="dot on" id="statusDot"></span>
+      <span id="statusText">checking…</span>
+      <span class="sep"></span>
+      <button class="link-btn" id="btnShare" title="Copy this page's address to open it on another device">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+        Share
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============================ MAIN ============================ -->
+  <main class="main">
+    <header class="topbar">
+      <button class="btn icon burger" id="burger" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+
+      <div class="model-wrap">
+        <select class="model" id="model" title="Model"></select>
+      </div>
+      <span class="model-meta" id="modelMeta"></span>
+
+      <span class="spacer"></span>
+
+      <button class="btn" id="btnLearn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg>
+        Learn
+      </button>
+      <button class="btn" id="btnSettings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 15a1.6 1.6 0 1 1 0-4 1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9 3.5V3a2 2 0 1 1 4 0v.1A1.6 1.6 0 0 0 15 4.6"/></svg>
+        Settings
+      </button>
+    </header>
+
+    <div class="stream" id="stream">
+      <div class="thread-inner" id="thread"></div>
+    </div>
+
+    <div class="composer-dock">
+      <div class="composer">
+        <textarea id="input" rows="1" placeholder="Send a message…  (Enter to send, Shift+Enter for a new line)"></textarea>
+        <button class="send" id="send" title="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"/><path d="M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+      <div class="hints">
+        <span id="genStatus">ready</span>
+        <span><kbd>Enter</kbd> send</span>
+        <span><kbd>Shift</kbd>+<kbd>Enter</kbd> newline</span>
+        <span><kbd>⌘K</kbd> new chat</span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============================ SETTINGS DRAWER ============================ -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h2>Settings</h2>
+    <button class="btn icon" id="drawerClose" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body">
+    <div class="field">
+      <label for="sysPrompt">System prompt</label>
+      <textarea class="sys" id="sysPrompt" placeholder="You are a helpful assistant running locally on the user's Mac."></textarea>
+      <div class="hint">Sent as the first message of every request. Changes apply to your next message.</div>
+    </div>
+
+    <div class="divider"></div>
+    <div id="params" style="display:grid;gap:20px"></div>
+
+    <div class="divider"></div>
+    <div class="row2">
+      <button class="btn" id="resetParams">Reset params</button>
+      <button class="btn danger" id="dropChat" title="Moves the file to data/.trash — recoverable">Delete chat</button>
+    </div>
+
+    <div class="divider"></div>
+    <div class="field">
+      <label>Installer</label>
+      <div class="hint" id="setupState">Checking…</div>
+      <button class="btn" id="rerunSetup">Re-open the installer</button>
+    </div>
+  </div>
+</aside>
+
+<!-- ============================ LEARN ============================ -->
+<section class="learn" id="learn">
+  <div class="learn-head">
+    <h2>How this works</h2>
+    <button class="btn icon" id="learnClose" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="learn-body" id="learnBody">
+    <div class="learn-inner">
+
+      <h3>01 · Processes &amp; ports</h3>
+      <p>Every service on your Mac runs as a <span class="term">process</span> and listens on a <span class="term">port</span> — a number between 0 and 65535. Ports are doors; each service gets its own.</p>
+      <pre class="diagram">YOUR MAC
+├── :8080   python3 server.py    serves this page + proxies to Ollama
+├── :11434  ollama serve         runs the model
+└── :9222   Chrome remote debug  browser automation</pre>
+      <p>When you open <code class="inline">http://127.0.0.1:8080</code> the browser connects to port 8080. The Python process that opened that port receives the request and sends back the HTML.</p>
+      <pre class="diagram">lsof -i :8080          # who owns the web server
+lsof -i :11434         # who owns ollama
+curl localhost:8080    # poke the server directly</pre>
+
+      <h3>02 · The glass</h3>
+      <p>This interface is built from <span class="term">translucent layers</span>. Each panel is a <code class="inline">backdrop-filter</code> that blurs and saturates whatever is behind it, plus a one-pixel specular highlight along its top edge.</p>
+      <pre class="diagram">.side, .main, .composer, .drawer
+  background   rgba(255,255,255,.055)   ← thin white film
+  backdrop     saturate(190%) blur(42px) ← the refraction
+  box-shadow   inset 0 1px 0 <sheen>     ← the light on the edge
+              0 24px 60px -28px #000     ← the shadow it casts</pre>
+      <p>The four <span class="term">aurora</span> blobs drifting behind everything are the light source. Glass is invisible without something to refract, so the background is never a flat colour.</p>
+      <pre class="diagram">backdrop-filter: blur(0)      → flat
+backdrop-filter: blur(30px)   → frosted
+backdrop-filter: blur(0)
+                   + brightness(1.4)    → glass</pre>
+
+      <h3>03 · localhost vs LAN IP</h3>
+      <ul>
+        <li><code class="inline">127.0.0.1</code> (localhost) — only your own machine can connect. Traffic never leaves the computer.</li>
+        <li><code class="inline">192.168.x.x</code> (LAN IP) — other devices on your WiFi can connect. Your router assigned this via <span class="term">DHCP</span>.</li>
+      </ul>
+      <pre class="diagram">LOCALHOST (127.0.0.1)
+┌────────────────────────────┐
+│  Browser ──Python──8080    │  traffic stays INSIDE the Mac
+│  Browser ──Python──11434   │  never touches the network
+└────────────────────────────┘
+
+LAN (192.168.x.x)
+┌────────────────────────────┐
+│  Phone ──WiFi──▶ Router    │
+│         Router ──▶ Mac     │  traffic goes THROUGH the network
+└────────────────────────────┘</pre>
+      <p>The server binds to <code class="inline">0.0.0.0</code>, so the address the terminal printed works from your phone on the same WiFi. Tap <b>Share</b> at the bottom of the sidebar to copy it.</p>
+
+      <h3>04 · Three ways in</h3>
+      <p>The right door depends on who is connecting and from where.</p>
+      <pre class="diagram">┌─ LOCAL ───────────────────────────┐
+│ 127.0.0.1:8080                    │  this Mac only
+├─ HOME WI-FI ──────────────────────┤
+│ 192.168.x.x:8080                  │  phone, tablet, laptop
+├─ TAILSCALE  (--tunnel tailscale) ─┤
+│ https://name.tailnet.ts.net       │  any device, VPN
+└─ CLOUDFLARE (--tunnel cloudflare) ┐
+   https://xxx.trycloudflare.com    │  any device, public URL</pre>
+      <ul>
+        <li><span class="term good">Tailscale</span> — a private mesh VPN. Nothing is published to the internet; only devices on your tailnet can reach the port. Best default.</li>
+        <li><span class="term good">Cloudflare Tunnel</span> — hands you a public HTTPS URL with no router changes and no open port. Use it when a device that can't run Tailscale needs access.</li>
+        <li><span class="term warn">Router port forwarding</span> — works, but it exposes the raw port to the entire internet over plain HTTP. Only sensible with the password gate, never without it.</li>
+      </ul>
+      <pre class="diagram"># one flag, whichever tool is installed
+./run.sh --tunnel
+
+# or be explicit
+python3 server.py --tunnel tailscale --funnel
+python3 server.py --tunnel cloudflare</pre>
+
+      <h3>05 · The password gate</h3>
+      <p>Any device that can reach the port can read and write your conversations, so the server requires a token. It is generated on first run, stored in <code class="inline">data/.token</code>, and printed in the terminal banner.</p>
+      <pre class="diagram">browser ──POST /api/login──▶ :8080  compares token
+                           ◀──Set-Cookie: qwen_token=…──
+browser ──GET /api/chats──▶ :8080  cookie sent automatically</pre>
+      <p>The cookie is <code class="inline">HttpOnly</code> so page scripts can't read it, <code class="inline">SameSite=Lax</code> so other sites can't ride it, and marked <code class="inline">Secure</code> whenever the request arrived over HTTPS — which is every tunnelled case. Failed logins are rate limited per IP. Set your own with <code class="inline">QWEN_TOKEN=… ./run.sh</code>, or turn the gate off for a trusted LAN with <code class="inline">--no-auth</code>.</p>
+
+      <h3>06 · CORS</h3>
+      <p>Browsers refuse cross-origin fetches unless the server opts in. Calling <code class="inline">:11434</code> straight from the page would require <code class="inline">OLLAMA_ORIGINS=*</code>. The proxy removes that whole class of problem: the browser only ever talks to <code class="inline">:8080</code>.</p>
+      <pre class="diagram">Browser ──▶ :8080 server.py ──▶ :11434 ollama
+          same origin        server-to-server</pre>
+
+      <h3>07 · Request flow</h3>
+      <pre class="diagram">1. You type a message
+2. JS POSTs to /api/chat on this server
+3. server.py builds an Ollama request and POSTs to :11434
+4. Ollama loads model layers into RAM
+5. Tokens stream back one at a time
+6. server.py re-frames them as SSE  (data: {...})
+7. JS appends each token to the bubble — you watch it type</pre>
+      <p><span class="term">Streaming</span> is why the reply appears word by word instead of all at once. Same total time, better feel.</p>
+
+      <h3>08 · Why it can be slow</h3>
+      <p>The bottleneck is model inference, not the browser or your network.</p>
+      <ul>
+        <li>Qwen3 8B has ~8.2B parameters</li>
+        <li><code class="inline">Q4_K_M</code> quantizes weights to ~4 bits → ~5 GB</li>
+        <li>It has to fit in unified memory alongside everything else</li>
+        <li>First token is slow (load + prefill), then ~20–40 tok/s</li>
+        <li>Reaching it over the internet adds your round-trip time to every token</li>
+      </ul>
+      <pre class="diagram">14B  Q4_K_M  ████████████░░░░░░░  9.0 GB
+ 8B  Q4_K_M  ███████░░░░░░░░░░░░  5.0 GB   ← good balance
+1.7B Q4_K_M  ██░░░░░░░░░░░░░░░░░░  1.1 GB   ← fastest</pre>
+
+      <h3>09 · Useful commands</h3>
+      <pre class="diagram"># start this server and open a browser
+python3 server.py --open
+
+# bind to localhost only (no LAN)
+python3 server.py --host 127.0.0.1
+
+# what models exist
+curl http://127.0.0.1:11434/api/tags
+
+# find your LAN address
+ipconfig getifaddr en0
+
+# where the data lives
+data/chats/*.json     one file per conversation
+data/.trash/*.json    deleted chats — move one back to restore it
+data/.token           the password, mode 600</pre>
+      <p>Conversations live as plain JSON in <code class="inline">data/chats/</code>. Deleting one moves the file to <code class="inline">data/.trash/</code> rather than erasing it — drag it back to restore.</p>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================ PASSWORD GATE ============================ -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="gate-mark">QW</div>
+    <h1>QW3N is locked</h1>
+    <p>This server can be reached from the network, so it wants the access token before it shows anything.</p>
+    <form id="gateForm" autocomplete="off">
+      <input type="password" id="gateToken" placeholder="access token" aria-label="Access token" spellcheck="false">
+      <button class="btn primary" type="submit" id="gateSubmit">Unlock</button>
+      <div class="err" id="gateErr"></div>
+    </form>
+    <div class="foot">The token is printed in the terminal that started the server, and lives in <code class="inline">data/.token</code>.</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/static/markdown.js"></script>
+<script src="/static/setup.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
